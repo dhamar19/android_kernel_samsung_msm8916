@@ -104,7 +104,7 @@ static inline bool is_allow_su()
 	    // we are manager, allow!
 	    return true;
 	}
-	return ksu_is_allow_uid_for_current(current_uid().val);
+	return ksu_is_allow_uid_for_current(current_uid());
 }
 
 LSM_HANDLER_TYPE ksu_handle_rename(struct dentry *old_dentry, struct dentry *new_dentry)
@@ -114,7 +114,7 @@ LSM_HANDLER_TYPE ksu_handle_rename(struct dentry *old_dentry, struct dentry *new
 		return 0;
 	}
 
-	if (current_uid().val != 1000) {
+	if (current_uid() != 1000) {
 		// skip non system uid
 		return 0;
 	}
@@ -218,17 +218,17 @@ LSM_HANDLER_TYPE ksu_handle_setuid(struct cred *new, const struct cred *old)
 	kuid_t new_euid = new->euid;
 	kuid_t old_euid = old->euid;
 
-	if (0 != old_uid.val && ksu_enhanced_security_enabled) {
+	if (0 != old_uid && ksu_enhanced_security_enabled) {
 		// disallow any non-ksu domain escalation from non-root to root!
-		if (unlikely(new_euid.val) == 0 && !is_ksu_domain()) {
-			pr_warn("find suspicious EoP: %d %s, from %d to %d\n", current->pid, current->comm, old_uid.val, new_uid.val);
+		if (unlikely(new_euid) == 0 && !is_ksu_domain()) {
+			pr_warn("find suspicious EoP: %d %s, from %d to %d\n", current->pid, current->comm, old_uid, new_uid);
 			ksu_force_sig(SIGKILL);
 			return 0;
 		}
 		// disallow appuid decrease to any other uid if it is not allowed to su
-		if (is_appuid(old_uid.val)) {
-			if (new_euid.val < old_euid.val && !ksu_is_allow_uid_for_current(old_uid.val)) {
-				pr_warn("find suspicious EoP: %d %s, from %d to %d\n", current->pid, current->comm, old_euid.val, new_euid.val);
+		if (is_appuid(old_uid)) {
+			if (new_euid < old_euid && !ksu_is_allow_uid_for_current(old_uid)) {
+				pr_warn("find suspicious EoP: %d %s, from %d to %d\n", current->pid, current->comm, old_euid, new_euid);
 				ksu_force_sig(SIGKILL);
 				return 0;
 			}
@@ -238,22 +238,22 @@ LSM_HANDLER_TYPE ksu_handle_setuid(struct cred *new, const struct cred *old)
 	}
 	
 	// old process is not root, ignore it.
-	if (0 != old_uid.val)
+	if (0 != old_uid)
 		return 0;
 
 	// if on private space, see if its possibly the manager
-	if (new_uid.val > PER_USER_RANGE && new_uid.val % PER_USER_RANGE == ksu_get_manager_uid()) {
-		ksu_set_manager_uid(new_uid.val);
+	if (new_uid > PER_USER_RANGE && new_uid % PER_USER_RANGE == ksu_get_manager_uid()) {
+		ksu_set_manager_uid(new_uid);
 	}
 
 	// we dont have those new fancy things upstream has
 	// lets just do original thing where we disable seccomp
-	if (unlikely(ksu_is_allow_uid_for_current(new_uid.val))) {
+	if (unlikely(ksu_is_allow_uid_for_current(new_uid))) {
 		spin_lock_irq(&current->sighand->siglock);
 		disable_seccomp();
 		spin_unlock_irq(&current->sighand->siglock);
-		if (ksu_get_manager_uid() == new_uid.val) {
-			pr_info("install fd for: %d\n", new_uid.val);
+		if (ksu_get_manager_uid() == new_uid) {
+			pr_info("install fd for: %d\n", new_uid);
 			ksu_install_fd(); // install fd for ksu manager
 		}
 
@@ -275,11 +275,11 @@ LSM_HANDLER_TYPE ksu_handle_setuid(struct cred *new, const struct cred *old)
 	// 3. App zygote forked from zygote: zygote -> appuid
 	// 4. Isolated process froked from app zygote: appuid -> isolated_process (already handled by 3)
 	// 5. Isolated process froked from webview zygote (no need to handle, app cannot run custom code)
-	if (!is_appuid(new_uid.val) && !is_isolated_process(new_uid.val)) {
+	if (!is_appuid(new_uid) && !is_isolated_process(new_uid)) {
 		return 0;
 	}
 
-	if (!ksu_uid_should_umount(new_uid.val) && !is_isolated_process(new_uid.val)) {
+	if (!ksu_uid_should_umount(new_uid) && !is_isolated_process(new_uid)) {
 		return 0;
 	}
 
@@ -295,7 +295,7 @@ LSM_HANDLER_TYPE ksu_handle_setuid(struct cred *new, const struct cred *old)
 	}
 
 	// umount the target mnt
-	pr_info("handle umount for uid: %d, pid: %d\n", new_uid.val, current->pid);
+	pr_info("handle umount for uid: %d, pid: %d\n", new_uid, current->pid);
 
 	struct mount_entry *entry;
 	down_read(&mount_list_lock);

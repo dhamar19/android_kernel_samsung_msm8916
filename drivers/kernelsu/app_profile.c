@@ -96,23 +96,23 @@ static void escape_to_root(bool is_kthread)
 		return;
 	}
 
-	if (!is_kthread && cred->euid.val == 0) {
+	if (!is_kthread && cred->euid == 0) {
 		pr_warn("Already root, don't escape!\n");
 		abort_creds(cred);
 		return;
 	}
 
-	struct root_profile *profile = ksu_get_root_profile(cred->uid.val);
+	struct root_profile *profile = ksu_get_root_profile(cred->uid);
 
-	cred->uid.val = profile->uid;
-	cred->suid.val = profile->uid;
-	cred->euid.val = profile->uid;
-	cred->fsuid.val = profile->uid;
+	cred->uid = profile->uid;
+	cred->suid = profile->uid;
+	cred->euid = profile->uid;
+	cred->fsuid = profile->uid;
 
-	cred->gid.val = profile->gid;
-	cred->fsgid.val = profile->gid;
-	cred->sgid.val = profile->gid;
-	cred->egid.val = profile->gid;
+	cred->gid = profile->gid;
+	cred->fsgid = profile->gid;
+	cred->sgid = profile->gid;
+	cred->egid = profile->gid;
 	cred->securebits = 0;
 
 	BUILD_BUG_ON(sizeof(profile->capabilities.effective) !=

@@ -39,12 +39,12 @@ bool only_manager(void)
 
 bool only_root(void)
 {
-	return current_uid().val == 0;
+	return current_uid() == 0;
 }
 
 bool manager_or_root(void)
 {
-	return current_uid().val == 0 || is_manager();
+	return current_uid() == 0 || is_manager();
 }
 
 bool always_allow(void)
@@ -54,7 +54,7 @@ bool always_allow(void)
 
 bool allowed_for_su(void)
 {
-	bool is_allowed = is_manager() || ksu_is_allow_uid_for_current(current_uid().val);
+	bool is_allowed = is_manager() || ksu_is_allow_uid_for_current(current_uid());
 	return is_allowed;
 }
 
@@ -62,7 +62,7 @@ static int do_grant_root(void __user *arg)
 {
 	// we already check uid above on allowed_for_su()
 
-	pr_info("allow root for: %d\n", current_uid().val);
+	pr_info("allow root for: %d\n", current_uid());
 	escape_with_root_profile();
 
 	return 0;
@@ -687,7 +687,7 @@ int ksu_handle_sys_reboot(int magic1, int magic2, unsigned int cmd, void __user 
 
 	if (magic2 == CHANGE_MANAGER_UID) {
 		// only root is allowed for this command
-		if (current_uid().val != 0)
+		if (current_uid() != 0)
 			return 0;
 
 		pr_info("sys_reboot: ksu_set_manager_uid to: %d\n", cmd);
@@ -723,7 +723,7 @@ static long anon_ksu_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 	int i;
 
 #ifdef CONFIG_KSU_DEBUG
-	pr_info("ksu ioctl: cmd=0x%x from uid=%d\n", cmd, current_uid().val);
+	pr_info("ksu ioctl: cmd=0x%x from uid=%d\n", cmd, current_uid());
 #endif
 
 	for (i = 0; ksu_ioctl_handlers[i].handler; i++) {
@@ -732,7 +732,7 @@ static long anon_ksu_ioctl(struct file *filp, unsigned int cmd, unsigned long ar
 			if (ksu_ioctl_handlers[i].perm_check &&
 			    !ksu_ioctl_handlers[i].perm_check()) {
 				pr_warn("ksu ioctl: permission denied for cmd=0x%x uid=%d\n",
-					cmd, current_uid().val);
+					cmd, current_uid());
 				return -EPERM;
 			}
 			// Execute handler
