@@ -1,12 +1,13 @@
 #ifndef __KSU_H_KERNEL_COMPAT
 #define __KSU_H_KERNEL_COMPAT
 
+#include <linux/version.h>
 #include <linux/uaccess.h>
-#include "linux/fs.h"
-#include "linux/key.h"
-#include "linux/version.h"
-#include "linux/key.h"
-#include "linux/cred.h"
+#include <linux/fs.h>
+#include <linux/key.h>
+#include <linux/sched.h>
+#include <linux/fdtable.h>
+#include <linux/cred.h>
 
 extern struct file *ksu_filp_open_compat(const char *filename, int flags,
 					 umode_t mode);
@@ -32,8 +33,6 @@ __weak int close_fd(unsigned fd)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 7, 0) && LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0)
 __weak int close_fd(unsigned fd)
 {
-	// this is ksys_close, but that shit is inline
-	// its problematic to cascade a weak symbol for it
 	return __close_fd(current->files, fd);
 }
 #endif
@@ -55,7 +54,6 @@ static long ksu_copy_from_user_retry(void *to,
 	if (likely(!ret))
 		return ret;
 
-	// we faulted! fallback to slow path
 	return copy_from_user(to, from, count);
 }
 
